@@ -1,0 +1,4 @@
+const test = require('node:test'); const assert = require('node:assert/strict'); const { evaluateCircuitBreaker } = require('../server/circuitBreaker');
+test('circuit breaker bloqueia três perdas consecutivas', () => { const r = evaluateCircuitBreaker({ total_trades: 5, win_rate: 40 }, [{ pnl: -1 }, { pnl: -2 }, { pnl: -3 }]); assert.equal(r.blocked, true); assert.equal(r.code, 'LOSS_STREAK'); });
+test('circuit breaker avalia win rate somente com amostra mínima', () => { assert.equal(evaluateCircuitBreaker({ total_trades: 9, win_rate: 10 }, []).blocked, false); assert.equal(evaluateCircuitBreaker({ total_trades: 10, win_rate: 20 }, []).code, 'LOW_WIN_RATE'); });
+test('circuit breaker libera histórico saudável', () => { assert.deepEqual(evaluateCircuitBreaker({ total_trades: 20, win_rate: 55 }, [{ pnl: -1 }, { pnl: 2 }]), { blocked: false, code: 'OK', lossStreak: 1 }); });

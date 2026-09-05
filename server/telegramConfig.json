@@ -1,0 +1,13 @@
+{
+  "botToken": "8787945164:AAH55dEjFfva1_4dXMJ45GOFvG_wmQu5DbM",
+  "chatId": "1724229910",
+  "autoAlertsEnabled": true,
+  "minScore": 70,
+  "alertIntervalMinutes": 15,
+  "lastAlertTimestamps": {
+    "ETHUSDT": 1788467528319,
+    "SOLUSDT": 1788467529335,
+    "LINKUSDT": 1788467531610
+  },
+  "botUsername": "Crypto1996_Bot"
+}

@@ -1,0 +1,408 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Signal Engine | Intelligence Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0D1117;
+            --bg-card: #161B22;
+            --bg-input: #0B0E11;
+            --border-color: #30363D;
+            --text-main: #C9D1D9;
+            --text-muted: #8B949E;
+            --accent: #58A6FF;
+            --bull: #238636;
+            --bear: #DA3633;
+            --gold: #F0B90B;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .widget { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .widget:hover { border-color: #484F58; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        
+        .text-gold { color: var(--gold); }
+        .bg-gold { background-color: var(--gold); }
+        .chart-container { height: 100%; width: 100%; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363D; border-radius: 10px; }
+        
+        .tf-card { 
+            background: var(--bg-main); 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            padding: .75rem; 
+            text-align:center; 
+            transition: all 0.4s;
+        }
+        .tf-card.bullish { border-color: var(--bull); background: rgba(35, 134, 54, 0.1); }
+        .tf-card.bearish { border-color: var(--bear); background: rgba(218, 54, 51, 0.1); }
+        .tf-card b { color: var(--text-muted); font:600 10px 'JetBrains Mono', monospace; display: block; margin-bottom: 4px; }
+        .tf-card span { color:#fff; font:700 12px 'JetBrains Mono', monospace; }
+        
+        .chart-tool { 
+            background: var(--bg-main); 
+            border: 1px solid var(--border-color); 
+            color: var(--text-muted); 
+            border-radius: 6px; 
+            padding: .4rem .7rem; 
+            font:600 9px 'JetBrains Mono',monospace; 
+            transition: all 0.2s; 
+            cursor: pointer; 
+        }
+        .chart-tool:hover { color:#fff; border-color: var(--text-muted); background: #21262D; }
+        .chart-tool.active { color:#000; background: var(--gold); border-color: var(--gold); }
+        
+        .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 8px; margin-bottom: 4px; }
+        .sidebar-item.active { background: #21262D; color: #fff; box-shadow: inset 4px 0 0 var(--gold); }
+        
+        #chart-focus { position:fixed !important; inset:0 !important; z-index:100 !important; background:var(--bg-main) !important; }
+        
+        .ai-report-container { 
+            background: linear-gradient(180deg, rgba(22,27,34,1) 0%, rgba(13,17,23,1) 100%);
+            border-left: 3px solid var(--gold);
+        }
+        </style>
+    <link rel="stylesheet" href="decision-tree.css">
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-90 transition-opacity duration-500">
+        <div class="glass p-10 rounded-3xl w-96 text-center shadow-2xl border border-gray-800 bg-[#161B22]">
+            <h1 class="text-3xl font-black text-white mb-2 tracking-tighter italic">CRYPTO<span class="text-gold">SIGNAL</span></h1>
+            <p class="text-gray-500 mb-8 text-xs mono uppercase tracking-[0.2em]">Intelligence Terminal</p>
+            <form id="login-form" class="space-y-4">
+                <div class="relative">
+                    <input type="password" id="login-pass" placeholder="Access Code" class="w-full bg-black border border-gray-800 p-4 rounded-xl text-center mono focus:border-gold outline-none transition-all text-white">
+                    <button type="button" onclick="app.togglePasswordVisibility()" class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 hover:text-gold mono">SHOW</button>
+                </div>
+                <button id="login-btn" type="submit" class="w-full bg-gold text-black font-bold p-4 rounded-xl hover:scale-[1.02] transition-all uppercase tracking-widest text-xs">Autenticar</button>
+                <a id="demo-login-btn" href="/api/auth/demo-access" class="hidden block w-full mt-3 border border-gray-800 text-gray-400 font-bold p-4 rounded-xl hover:border-gold hover:text-gold transition-all uppercase tracking-widest text-[10px]">Demo Access</a>
+                <p id="login-error" class="text-red-500 mt-4 text-xs hidden mono">Invalid Credentials</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-64 glass border-r border-gray-800 flex flex-col z-40 bg-[#0D1117]">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="h-9 w-9 bg-gold rounded-xl flex items-center justify-center text-black font-black shadow-lg shadow-gold/20">P</div>
+                <div>
+                    <span class="block font-bold text-sm tracking-tight text-white">Paulo Moreira</span>
+                    <span class="block text-[9px] text-gray-500 mono uppercase tracking-tighter">Quantitative Research</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between mb-4 px-1">
+                <span class="text-[10px] text-gray-500 uppercase mono font-bold tracking-widest">Watchlist</span>
+                <span class="text-[10px] text-gold mono" id="asset-count">0</span>
+            </div>
+            
+            <div class="flex gap-2 mb-6">
+                <input id="new-symbol" maxlength="15" placeholder="Symbol..." class="flex-1 bg-black border border-gray-800 rounded-lg px-3 py-2 text-[11px] mono uppercase outline-none focus:border-gold text-white">
+                <button onclick="app.addAsset()" class="bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-white transition-all">+</button>
+            </div>
+
+            <div class="flex flex-col gap-1 overflow-y-auto custom-scrollbar max-h-[60vh]" id="symbol-tabs">
+                <!-- Symbol items injected here -->
+            </div>
+        </div>
+        
+        <div class="mt-auto p-6 border-t border-gray-800 space-y-4 bg-black/20">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] text-gray-500 mono uppercase">Engine State</span>
+                <span id="engine-status" class="text-[10px] font-bold text-yellow-500 flex items-center gap-1">
+                    <span class="h-1.5 w-1.5 bg-yellow-500 rounded-full"></span> RESEARCH
+                </span>
+            </div>
+            <button onclick="app.logout()" class="w-full py-2 text-xs text-gray-500 hover:text-white transition-colors uppercase mono text-center border border-gray-800 rounded-lg hover:border-gray-600">Sign Out</button>
+        </div>
+    </aside>
+
+    <!-- MAIN INTERFACE -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-14 glass border-b border-gray-800 flex items-center justify-between px-6 z-30 bg-[#161B22]">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <h2 id="active-symbol" class="text-lg font-extrabold tracking-tight text-white">BTCUSDT</h2>
+                    <button id="favorite-btn" onclick="app.toggleFavorite()" class="text-lg text-gray-600 hover:text-yellow-400 transition-colors">☆</button>
+                    <span id="current-price" class="text-lg mono font-bold text-white">0.00</span>
+                </div>
+                <div id="ohlc-legend" class="hidden md:flex gap-4 text-[11px] mono text-gray-500 border-l border-gray-800 pl-6">
+                    <span class="flex gap-1">O <b id="ohlc-o" class="text-gray-300">—</b></span>
+                    <span class="flex gap-1">H <b id="ohlc-h" class="text-gray-300">—</b></span>
+                    <span class="flex gap-1">L <b id="ohlc-l" class="text-gray-300">—</b></span>
+                    <span class="flex gap-1">C <b id="ohlc-c" class="text-gray-300">—</b></span>
+                    <span id="ohlc-change" class="font-bold text-gray-400">—</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-[10px] px-2 py-1 rounded bg-blue-500/10 text-blue-400 mono border border-blue-500/20 font-medium">INTEL MODE</span>
+                <div class="h-4 w-px bg-gray-800"></div>
+                <span id="automation-status" class="text-[10px] text-yellow-500 mono font-bold">SCANNING</span>
+            </div>
+        </header>
+
+        <div class="flex-1 p-4 grid grid-cols-12 grid-rows-7 gap-4 overflow-hidden">
+            <div class="col-span-12 lg:col-span-8 row-span-4 widget relative overflow-hidden bg-[#0B0E11]">
+                <div class="absolute top-3 right-3 z-20 flex flex-col items-end gap-3">
+                    <div class="flex gap-1" id="chart-timeframes">
+                        <button class="chart-tool tf" data-timeframe="1h">1H</button>
+                        <button class="chart-tool tf active" data-timeframe="4h">4H</button>
+                        <button class="chart-tool tf" data-timeframe="1d">1D</button>
+                        <button class="chart-tool tf" data-timeframe="1w">1W</button>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-1 max-w-md" id="chart-tools">
+                        <button class="chart-tool active" data-tool="ema">EMAs</button>
+                        <button class="chart-tool" data-tool="bollinger">Bollinger</button>
+                        <button class="chart-tool active" data-tool="volume">Volume</button>
+                        <button class="chart-tool active" data-tool="pivots">Pivots</button>
+                        <button class="chart-tool active" data-tool="levels">S/R</button>
+                        <button class="chart-tool" data-tool="fibo">Fibo</button>
+                        <button class="chart-tool" data-tool="vwap">VWAP</button>
+                        <button class="chart-tool" data-tool="poc">POC</button>
+                        <button class="chart-tool" data-tool="risk">R:R</button>
+                        <button class="chart-tool" data-tool="channel">Channel</button>
+                        <button class="chart-tool" data-tool="liquidity">Liquidity</button>
+                        <button class="chart-tool" data-tool="blocks">OB</button>
+                    </div>
+                    <div class="flex gap-1" id="drawing-tools">
+                        <button class="chart-tool draw" data-draw="trend">Trend</button>
+                        <button class="chart-tool draw" data-draw="horizontal">Level</button>
+                        <button class="chart-tool draw" data-draw="ruler">Ruler</button>
+                        <button class="chart-tool draw active" id="drawing-snap">Snap</button>
+                        <button class="chart-tool draw" data-draw="undo">Undo</button>
+                        <button class="chart-tool draw" data-draw="clear">Clear</button>
+                        <button class="chart-tool draw" id="chart-log">Log</button>
+                        <button class="chart-tool draw active" id="chart-grid">Grid</button>
+                        <button class="chart-tool draw" id="chart-reset">Reset</button>
+                        <button class="chart-tool draw" id="chart-focus">Focus</button>
+                    </div>
+                </div>
+                <div id="chart-insights" class="absolute bottom-4 left-4 z-10 bg-black/60 backdrop-blur px-3 py-1 rounded text-[10px] mono text-gray-400 pointer-events-none border border-gray-800">4H • Initializing...</div>
+                <div id="main-chart" class="chart-container"></div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-4 row-span-2 widget p-5 flex flex-col">
+                <div class="flex justify-between items-center mb-5">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase mono tracking-widest">Confirmation Matrix</h3>
+                    <span class="text-[9px] text-gray-600 mono">SEQ-FILTER</span>
+                </div>
+                <div class="grid grid-cols-5 gap-2" id="timeframe-chain">
+                    <div class="tf-card"><b>1M</b><span id="tf-1m">—</span></div>
+                    <div class="tf-card"><b>1W</b><span id="tf-1w">—</span></div>
+                    <div class="tf-card"><b>1D</b><span id="tf-1d">—</span></div>
+                    <div class="tf-card"><b>4H</b><span id="tf-4h">—</span></div>
+                    <div class="tf-card"><b>1H</b><span id="tf-1h">—</span></div>
+                </div>
+                
+                <div class="mt-4 flex flex-col gap-1">
+                    <div class="flex justify-between text-[9px] mono text-gray-600 uppercase mb-1 font-bold tracking-tighter">
+                        <span>Scenario</span><span>Trigger</span><span>Confirmed</span>
+                    </div>
+                    <div class="flex gap-1 h-1.5" id="signal-pipeline">
+                        <div class="flex-1 bg-gray-800 rounded-full transition-all duration-500" id="step-scenario"></div>
+                        <div class="flex-1 bg-gray-800 rounded-full transition-all duration-500" id="step-trigger"></div>
+                        <div class="flex-1 bg-gray-800 rounded-full transition-all duration-500" id="step-confirmed"></div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex items-center justify-between bg-black/60 p-5 rounded-2xl border border-gray-800 shadow-inner">
+
+                    <div class="flex flex-col">
+                        <p class="text-[10px] text-gray-500 mono uppercase font-bold mb-1">Probability</p>
+                        <div id="signal-score" class="text-5xl font-black text-white tracking-tighter">0%</div>
+                    </div>
+                    <div class="text-right flex flex-col">
+                        <p class="text-[10px] text-gray-500 mono uppercase font-bold mb-1">Action</p>
+                        <div id="signal-action" class="text-2xl font-black uppercase tracking-widest text-gray-400">Neutral</div>
+                    </div>
+                </div>
+                <p id="signal-setup" class="text-[11px] text-gray-400 mono mt-4 text-center italic">Scanning confluences...</p>
+            </div>
+
+
+            <div class="col-span-12 lg:col-span-12 row-span-1 widget p-4 flex flex-col" id="decision-tree-widget">
+                <h3 class="text-xs font-bold text-gray-500 uppercase mono mb-3 tracking-widest">Signal Pipeline — Decision Tree</h3>
+                <div id="signal-tree" class="flex-1 min-h-[120px]"></div>
+            </div>
+            <div class="col-span-12 lg:col-span-4 row-span-2 widget p-5 flex flex-col">
+                <h3 class="text-xs font-bold text-gray-500 uppercase mono mb-5 tracking-widest">Order Flow Engine</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-gray-800">
+                        <span class="text-xs text-gray-500 mono">CVD Delta</span>
+                        <span id="flow-cvd" class="font-bold mono text-white">0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-gray-800">
+                        <span class="text-xs text-gray-500 mono">POC Level</span>
+                        <span id="flow-poc" class="font-bold mono text-white">0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-gray-800">
+                        <span class="text-xs text-gray-500 mono">Funding Rate</span>
+                        <span id="flow-funding" class="font-bold mono text-white">0.00%</span>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-2">
+                    <button id="scan-now-btn" onclick="app.runSignalScan()" class="flex-1 bg-gray-800 hover:bg-gray-700 py-3 rounded-xl text-[10px] mono uppercase font-bold transition-all">Force Scan</button>
+                </div>
+                <div id="automation-meta" class="text-[9px] text-gray-600 mono mt-3 text-center">Awaiting cycle...</div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-5 row-span-2 widget p-5 flex flex-col overflow-hidden bg-[#0D1117]">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase mono tracking-widest">Intelligence Hub</h3>
+                    <span id="ai-provider" class="text-[9px] text-purple-400 mono font-bold bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20">LOCAL</span>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
+                    <div class="bg-black/40 border border-gray-800 rounded-2xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] text-gray-500 uppercase mono font-bold tracking-wider">Cross-Market Influence</span>
+                            <span id="influence-trend" class="text-[10px] mono text-gold font-bold">—</span>
+                        </div>
+                        <p id="influence-summary" class="text-xs text-gray-300 leading-relaxed mb-4">Synthesizing market dynamics...</p>
+                        <div id="influence-factors" class="flex flex-wrap gap-1"></div>
+                        <div id="influence-news" class="mt-4 pt-4 border-t border-gray-800 space-y-3 text-[10px] mono text-gray-500"></div>
+                    </div>
+                    <div id="audit-evidence" class="hidden bg-black/60 border border-gray-800 rounded-2xl p-4 space-y-3">
+                        <span class="text-[10px] text-gray-500 uppercase mono font-bold block mb-2">Audit Evidence Snapshot</span>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] mono">
+                            <div class="flex justify-between"><span>ADX 4H:</span><span id="ev-adx" class="text-white">—</span></div>
+                            <div class="flex justify-between"><span>RSI 4H:</span><span id="ev-rsi" class="text-white">—</span></div>
+                            <div class="flex justify-between"><span>Vol Ratio:</span><span id="ev-vol" class="text-white">—</span></div>
+                            <div class="flex justify-between"><span>Funding:</span><span id="ev-fund" class="text-white">—</span></div>
+                            <div class="flex justify-between"><span>24h Chg:</span><span id="ev-chg" class="text-white">—</span></div>
+                            <div class="flex justify-between"><span>Setup:</span><span id="ev-setup" class="text-white">—</span></div>
+                        </div>
+                    </div>
+                    <div id="ai-report" class="ai-report-container p-5 text-sm text-gray-300 leading-relaxed italic rounded-r-xl">
+                        Waiting for analysis...
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-span-12 lg:col-span-3 row-span-2 widget p-5 flex flex-col">
+                <h3 class="text-xs font-bold text-gold uppercase mono mb-5 tracking-widest">Paper Trading</h3>
+                <div class="space-y-4 mb-6">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[9px] text-gray-500 uppercase mono block ml-1">Risk %</label>
+                            <input type="number" id="risk-val" value="1" class="w-full bg-black border border-gray-800 p-2 rounded-lg text-sm mono outline-none focus:border-gold text-white transition-all">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[9px] text-gray-500 uppercase mono block ml-1">Wallet</label>
+                            <input type="number" id="wallet-val" value="1000" class="w-full bg-black border border-gray-800 p-2 rounded-lg text-sm mono outline-none focus:border-gold text-white transition-all">
+                        </div>
+                    </div>
+                    <div id="risk-intel" class="hidden p-3 bg-black/60 rounded-xl border border-gray-800 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] text-gray-500 uppercase mono">Sizing</span>
+                            <span id="risk-size" class="text-xs font-bold text-white mono">0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] text-gray-500 uppercase mono">Margin</span>
+                            <span id="risk-margin" class="text-xs font-bold text-white mono">$0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] text-gray-500 uppercase mono">Status</span>
+                            <span id="risk-status" class="text-[9px] mono font-bold uppercase text-emerald-400">OK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="paper-position" class="text-[10px] text-gray-500 mono mb-4 p-3 bg-black/40 rounded-xl border border-dashed border-gray-800 text-center italic">No active position</div>
+                <button onclick="app.openPaperTrade()" class="w-full bg-gold hover:bg-yellow-600 text-black font-black p-4 rounded-xl transition-all uppercase text-xs tracking-widest shadow-lg shadow-gold/10 mb-5">Execute Order</button>
+                <div class="flex-1 overflow-y-auto custom-scrollbar bg-black/20 rounded-xl p-3 border border-gray-800">
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div class="p-2 bg-black/40 rounded border border-gray-800 text-center">
+                            <p class="text-[9px] text-gray-500 uppercase mono">Total PnL</p>
+                            <p id="portfolio-pnl" class="text-sm font-bold text-white">$0.00</p>
+                        </div>
+                        <div class="p-2 bg-black/40 rounded border border-gray-800 text-center">
+                            <p class="text-[9px] text-gray-500 uppercase mono">Exposure</p>
+                            <p id="portfolio-exposure" class="text-sm font-bold text-white">$0</p>
+                        </div>
+                    </div>
+                    <div class="h-1 bg-gray-800 rounded overflow-hidden mb-1">
+                        <div id="portfolio-risk-bar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[9px] mono text-gray-600">
+                        <span id="stat-winrate">WR 0%</span>
+                        <span id="stat-open">0 Pos</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-4 row-span-2 widget p-5 flex flex-col">
+                <div class="flex gap-2 mb-4 bg-black/40 p-1 rounded-lg">
+                    <button onclick="app.switchTab('journal')" class="flex-1 py-1.5 text-[10px] mono uppercase font-bold rounded-md transition-all bg-gray-800 text-white">Journal</button>
+                    <button onclick="app.switchTab('alerts')" class="flex-1 py-1.5 text-[10px] mono uppercase font-bold rounded-md transition-all text-gray-500 hover:text-gray-300">Alerts</button>
+                    <button onclick="app.switchTab('events')" class="flex-1 py-1.5 text-[10px] mono uppercase font-bold rounded-md transition-all text-gray-500 hover:text-gray-300">Events</button>
+                    <button onclick="app.switchTab('edge')" class="flex-1 py-1.5 text-[10px] mono uppercase font-bold rounded-md transition-all text-gray-500 hover:text-gray-300">Edge</button>
+                </div>
+                <div id="tab-journal" class="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="grid grid-cols-3 gap-2 flex-1 mr-4">
+                            <div class="bg-black p-2 rounded border border-gray-800 text-center">
+                                <span class="block text-[8px] text-gray-600 mono uppercase">Exp</span><b class="text-xs text-white mono">$0</b>
+                            </div>
+                            <div class="bg-black p-2 rounded border border-gray-800 text-center">
+                                <span class="block text-[8px] text-gray-600 mono uppercase">PF</span><b class="text-xs text-white mono">0.0</b>
+                            </div>
+                            <div class="bg-black p-2 rounded border border-gray-800 text-center">
+                                <span class="block text-[8px] text-gray-600 mono uppercase">Rev</span><b class="text-xs text-white mono">0/0</b>
+                            </div>
+                        </div>
+                        <button onclick="app.exportJournal()" class="chart-tool">CSV</button>
+                    </div>
+                    <div id="journal-list" class="space-y-2 text-[10px] mono text-gray-400">Auth required...</div>
+                </div>
+                <div id="tab-alerts" class="hidden flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                    <div class="grid grid-cols-[80px_1fr_auto] gap-2 mb-3">
+                        <select id="alert-condition" class="bg-black border border-gray-800 rounded-lg p-2 text-[10px] mono outline-none text-white">
+                            <option value="ABOVE">Above</option>
+                            <option value="BELOW">Below</option>
+                        </select>
+                        <input id="alert-price" type="number" placeholder="Price" class="bg-black border border-gray-800 rounded-lg p-2 text-xs mono outline-none focus:border-gold text-white">
+                        <button onclick="app.createAlert()" class="bg-gold text-black rounded-lg px-3 font-bold">+</button>
+                    </div>
+                    <div id="alert-list" class="space-y-1 text-[10px] mono text-gray-400">Auth required...</div>
+                </div>
+                <div id="tab-events" class="hidden flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] text-gray-500 mono uppercase tracking-widest">Live Stream</span>
+                        <button id="notification-btn" onclick="app.enableNotifications()" class="chart-tool">Enable</button>
+                    </div>
+                    <div id="event-list" class="space-y-1 text-[10px] mono text-gray-400">Waiting for signals...</div>
+                </div>
+                <div id="tab-edge" class="hidden flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] text-gray-500 mono uppercase tracking-widest">Quantitative Edge</span>
+                        <span class="text-[9px] text-gold mono font-bold">SAMPLED</span>
+                    </div>
+                    <div id="edge-list" class="space-y-1 text-[10px] mono text-gray-400">Analyzing performance...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="app-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-2xl text-xs mono opacity-0 pointer-events-none transition-all z-50 border border-gold shadow-2xl bg-black/80"></div>
+
+    <script src="app.js"></script>
+    <script src="decision-tree.js"></script>
+</body>
+</html>

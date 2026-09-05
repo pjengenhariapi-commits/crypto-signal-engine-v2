@@ -1,0 +1,519 @@
+/**
+ * Decision Tree Widget - Obsidian Dark Theme
+ * CSS for the interactive crypto signal analysis pipeline visualization
+ */
+
+:root {
+    /* Core palette */
+    --dt-color-bullish: #00ff88;
+    --dt-color-bearish: #ff4444;
+    --dt-color-warning: #ffaa00;
+    --dt-color-neutral: #4488ff;
+
+    /* Glow intensities */
+    --dt-glow-bullish: 0 0 12px rgba(0, 255, 136, 0.5);
+    --dt-glow-bearish: 0 0 12px rgba(255, 68, 68, 0.5);
+    --dt-glow-warning: 0 0 12px rgba(255, 170, 0, 0.5);
+
+    /* Surface colors */
+    --dt-bg: rgba(15, 15, 25, 0.9);
+    --dt-bg-node: rgba(20, 20, 40, 0.85);
+    --dt-border: rgba(255, 255, 255, 0.08);
+    --dt-text: #e0e0e0;
+    --dt-text-dim: #888888;
+    --dt-text-muted: #666666;
+}
+
+/* ==========================================
+   Container
+   ========================================== */
+
+.decision-tree-container {
+    min-width: 600px;
+    width: 100%;
+    background: var(--dt-bg);
+    border: 1px solid var(--dt-border);
+    border-radius: 12px;
+    padding: 20px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--dt-text);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.decision-tree-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ==========================================
+   SVG Flow Diagram
+   ========================================== */
+
+.decision-tree-svg-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+}
+
+.decision-tree-svg {
+    width: 100%;
+    height: auto;
+    min-height: 180px;
+}
+
+/* ==========================================
+   Node Styling
+   ========================================== */
+
+.decision-tree-node .node-rect {
+    transition: stroke 0.3s ease, fill 0.3s ease;
+}
+
+.decision-tree-node:hover .node-rect {
+    fill: rgba(30, 30, 55, 0.95);
+}
+
+.decision-tree-node .node-label {
+    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    fill: #888;
+    user-select: none;
+}
+
+.decision-tree-node .node-value {
+    font-family: 'Consolas', 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    user-select: none;
+}
+
+.decision-tree-node .node-adx {
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 9px;
+    fill: #666;
+}
+
+/* ==========================================
+   Status-specific node styles
+   ========================================== */
+
+/* Confirmed nodes: green glow pulse */
+.dt-status-confirmed {
+    animation: dt-pulse-green 2.5s ease-in-out infinite;
+}
+
+.dt-status-confirmed .node-rect {
+    stroke: var(--dt-color-bullish);
+}
+
+/* Blocked nodes: red static glow */
+.dt-status-blocked .node-rect {
+    stroke: var(--dt-color-bearish);
+}
+
+/* In-progress nodes: amber pulse */
+.dt-status-in-progress {
+    animation: dt-pulse-amber 1.8s ease-in-out infinite;
+}
+
+.dt-status-in-progress .node-rect {
+    stroke: var(--dt-color-warning);
+}
+
+/* Neutral nodes: blue border, no animation */
+.dt-status-neutral .node-rect {
+    stroke: var(--dt-color-neutral);
+    stroke-dasharray: 6 3;
+}
+
+/* ==========================================
+   Overlay indicators
+   ========================================== */
+
+.node-check {
+    animation: dt-fade-in 0.3s ease-out;
+}
+
+.node-cross {
+    animation: dt-fade-in 0.3s ease-out;
+}
+
+.node-spinner {
+    animation: dt-spin 1.2s linear infinite;
+    transform-origin: center;
+}
+
+/* ==========================================
+   Arrows
+   ========================================== */
+
+.decision-tree-arrow {
+    transition: opacity 0.3s ease;
+}
+
+/* ==========================================
+   Summary Bar
+   ========================================== */
+
+.decision-tree-summary {
+    background: rgba(20, 20, 35, 0.7);
+    border: 1px solid var(--dt-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+
+.summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Readiness row */
+.readiness-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.readiness-label-block {
+    flex-shrink: 0;
+}
+
+.readiness-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--dt-text-dim);
+}
+
+/* Progress bar track */
+.readiness-bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 100px;
+}
+
+.readiness-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.readiness-bar-fill.readiness-confirmed {
+    background: linear-gradient(90deg, #00cc66, #00ff88);
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+}
+
+.readiness-bar-fill.readiness-armed {
+    background: linear-gradient(90deg, #ccaa00, #ffcc00);
+    box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+}
+
+.readiness-bar-fill.readiness-forming {
+    background: linear-gradient(90deg, #cc8800, #ffaa00);
+    box-shadow: 0 0 6px rgba(255, 170, 0, 0.3);
+}
+
+.readiness-bar-fill.readiness-neutral {
+    background: linear-gradient(90deg, #3366cc, #4488ff);
+}
+
+/* Readiness value block */
+.readiness-value-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.readiness-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'SF Mono', monospace;
+}
+
+.readiness-status-badge.readiness-confirmed {
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--dt-color-bullish);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.readiness-status-badge.readiness-armed {
+    background: rgba(255, 204, 0, 0.15);
+    color: #ffcc00;
+    border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+.readiness-status-badge.readiness-forming {
+    background: rgba(255, 170, 0, 0.15);
+    color: var(--dt-color-warning);
+    border: 1px solid rgba(255, 170, 0, 0.3);
+}
+
+.readiness-status-badge.readiness-neutral {
+    background: rgba(68, 136, 255, 0.15);
+    color: var(--dt-color-neutral);
+    border: 1px solid rgba(68, 136, 255, 0.3);
+}
+
+.readiness-pct {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dt-text-dim);
+    font-family: 'Consolas', monospace;
+    min-width: 36px;
+    text-align: right;
+}
+
+/* ==========================================
+   Stage Breakdown
+   ========================================== */
+
+.stage-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+}
+
+.breakdown-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--dt-text-dim);
+}
+
+.breakdown-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.breakdown-icon.status-confirmed {
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--dt-color-bullish);
+}
+
+.breakdown-icon.status-blocked {
+    background: rgba(255, 68, 68, 0.15);
+    color: var(--dt-color-bearish);
+}
+
+.breakdown-icon.status-in-progress {
+    background: rgba(255, 170, 0, 0.15);
+    color: var(--dt-color-warning);
+}
+
+.breakdown-icon.status-neutral {
+    background: rgba(68, 136, 255, 0.1);
+    color: var(--dt-color-neutral);
+}
+
+.breakdown-label {
+    white-space: nowrap;
+}
+
+/* ==========================================
+   Missing Confluences
+   ========================================== */
+
+.missing-confluences {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--dt-border);
+    font-size: 11px;
+}
+
+.missing-label {
+    color: var(--dt-color-warning);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.missing-list {
+    color: var(--dt-text-dim);
+}
+
+/* ==========================================
+   Legend
+   ========================================== */
+
+.decision-tree-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding-top: 10px;
+    border-top: 1px solid var(--dt-border);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--dt-text-muted);
+}
+
+.legend-color {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-color.bullish {
+    background: var(--dt-color-bullish);
+    box-shadow: 0 0 4px rgba(0, 255, 136, 0.5);
+}
+
+.legend-color.bearish {
+    background: var(--dt-color-bearish);
+    box-shadow: 0 0 4px rgba(255, 68, 68, 0.5);
+}
+
+.legend-color.neutral {
+    background: var(--dt-color-neutral);
+}
+
+.legend-color.in-progress {
+    background: var(--dt-color-warning);
+    box-shadow: 0 0 4px rgba(255, 170, 0, 0.5);
+}
+
+.legend-label {
+    white-space: nowrap;
+}
+
+/* ==========================================
+   Animations
+   ========================================== */
+
+@keyframes dt-pulse-green {
+    0%, 100% {
+        filter: drop-shadow(0 0 4px rgba(0, 255, 136, 0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 14px rgba(0, 255, 136, 0.6));
+    }
+}
+
+@keyframes dt-pulse-amber {
+    0%, 100% {
+        filter: drop-shadow(0 0 3px rgba(255, 170, 0, 0.2));
+    }
+    50% {
+        filter: drop-shadow(0 0 10px rgba(255, 170, 0, 0.5));
+    }
+}
+
+@keyframes dt-fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes dt-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================
+   Responsive
+   ========================================== */
+
+@media (max-width: 800px) {
+    .decision-tree-container {
+        min-width: 600px;
+        padding: 14px;
+    }
+
+    .readiness-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .readiness-bar-track {
+        order: 3;
+        flex-basis: 100%;
+    }
+
+    .stage-breakdown {
+        gap: 4px 10px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .decision-tree-container {
+        padding: 24px 32px;
+    }
+}
+
+/* ==========================================
+   Print / Accessibility
+   ========================================== */
+
+@media print {
+    .decision-tree-container {
+        background: white;
+        border-color: #ccc;
+        color: #222;
+    }
+
+    .decision-tree-node .node-label {
+        fill: #444;
+    }
+
+    .readiness-status-badge {
+        border: 1px solid #999;
+    }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .dt-status-confirmed,
+    .dt-status-in-progress {
+        animation: none;
+    }
+
+    .node-spinner {
+        animation: none;
+    }
+
+    .readiness-bar-fill {
+        transition: none;
+    }
+}
