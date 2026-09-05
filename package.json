@@ -1,0 +1,37 @@
+{
+  "name": "crypto-signal-engine",
+  "version": "2.0.0",
+  "description": "Motor de análise cripto quantitativo sequencial (1M + 1W + 1D + 4H + 1H) com paper trading, microestrutura e otimização automática",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "validate": "node scripts/validate.js",
+    "calibrate": "node scripts/calibrate.js",
+    "optimize": "node scripts/optimize.js"
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.11.1",
+    "jsonwebtoken": "^9.0.3",
+    "ws": "^8.21.3"
+  },
+  "keywords": [
+    "crypto",
+    "signals",
+    "binance",
+    "ai",
+    "leverage",
+    "swing-trade",
+    "quantitative",
+    "microstructure",
+    "optimization"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

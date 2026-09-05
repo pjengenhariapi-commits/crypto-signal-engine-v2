@@ -1,0 +1,24 @@
+services:
+  engine:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_secret_with_32_characters}
+      - DEMO_MODE=true
+      - DATA_FILE=/app/data/trading_brain.db
+      - SIGNAL_MONITOR_ENABLED=true
+      - SIGNAL_SCAN_INTERVAL_SECONDS=60
+    volumes:
+      - engine-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  engine-data:
